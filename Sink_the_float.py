@@ -3,10 +3,18 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import matplotlib.colors
 
 import time
 
 militime = lambda: time.time() * 1000
+
+#Define map colors  
+levels = [-1, 0, 1, 2, 3]
+colors = ['b', 'y', 'g' , 'r']
+
+cmap, norm = matplotlib.colors.from_levels_and_colors(levels, colors)
 
 ######################################################
 #													 #
@@ -58,6 +66,23 @@ def contador_celdas(grid):
 				celdas_barco_tocado += 1
 
 	return celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado
+
+def validate_cell(grid, x, y):
+
+	for i in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+
+		try:
+
+			x_new = x + i[0]
+			y_new = y + i[1]
+
+			if grid[y_new][x_new] == 3:
+				return False
+
+		except:
+			pass
+
+	return True
 			
 
 ######################################################
@@ -189,61 +214,112 @@ def human(grid):
 	ship_cells_t = [celdas_barco]
 
 	while celdas_barco > 0:
-
-		iteration += 1
-
-		#print('Iteration %i with %i cell ships' % (iteration, celdas_barco))
 				
 		x = np.random.randint(cols)
 		y = np.random.randint(rows)
 
-		while grid[y][x] > 1:
+		boolean = validate_cell(grid, x, y)
+
+		while grid[y][x] > 1 or boolean == False:
 			
 			x = np.random.randint(cols)
 			y = np.random.randint(rows)
+
+			boolean = validate_cell(grid, x, y)
+
 
 		x_init = x
 		y_init = y
 
 		############ celda nueva escogida ###########
 
-		if grid[y][x] == 1:
+		if grid[y][x] == 1: #Si la celda es un barco, cambiar a barco tocado y seguir disparando alrededor (el for de dentro)
+
+			iteration += 1
 
 			grid[y][x] = 3
 
-			for i in [(0, 1), (1, 0), (-1, 0), (0, -1)]:
+			#print('Iteration %i with %i cell ships' % (iteration, celdas_barco))
+			celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado = contador_celdas(grid)
+			ship_cells_t.append(celdas_barco)
+
+			contador = 0
+			changed_dir = False
+
+			directions = [(0, 1), (1, 0), (-1, 0), (0, -1)]
+
+			for i in range(4): #Ir disparando en los 4 ejes (x+,x-,y+,y-)
+
+				if i == 1 and contador > 0: #Si has ido en x+ y has tocado barco, ve en el otro sentido pero misma direccion
+					i += 1 
+
+					changed_dir = True
+
+				elif i == 3 and contador > 0:
+					break
+
+				if celdas_barco == 0:
+					break
 
 				repeat = True
 
 				x = x_init
 				y = y_init
 
+				contador = 0
+
 				while repeat == True:
 
-					x += i[0] 
-					y += i[1]
+					if celdas_barco == 0:
+						break
+
+					x += directions[i][0] 
+					y += directions[i][1]
 
 					try:
 
 						if grid[y][x] == 0:
 
-							grid[y][x] = 2
+							repeat = False
 
-							repeat = False	
+							if changed_dir == False:
+
+								grid[y][x] = 2								
+
+								iteration += 1
+
+								#print('Iteration %i with %i cell ships' % (iteration, celdas_barco))
+								celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado = contador_celdas(grid)
+								ship_cells_t.append(celdas_barco)
 
 						elif grid[y][x] == 1:
 
 							grid[y][x] = 3
 
+							iteration += 1
+
+							contador += 1
+
+							#print('Iteration %i with %i cell ships' % (iteration, celdas_barco))
+							celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado = contador_celdas(grid)
+							ship_cells_t.append(celdas_barco)
+
+						else:
+							repeat = False
+
 					except:
 						break
 
-		elif grid[y][x] == 0:
-			grid[y][x] = 2
-		
-		celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado = contador_celdas(grid)
 
-		ship_cells_t.append(celdas_barco)	
+		elif grid[y][x] == 0: #Si la celda es agua, cambiar a agua tocada
+
+			iteration += 1
+
+			grid[y][x] = 2
+
+			#print('Iteration %i with %i cell ships' % (iteration, celdas_barco))
+			celdas_agua, celdas_barco, celdas_agua_tocada, celdas_barco_tocado = contador_celdas(grid)
+			ship_cells_t.append(celdas_barco)
 
 	return iteration, ship_cells_t
 
@@ -372,6 +448,7 @@ def game_human():
 
 	plt.show()
 
+
 ######################################################
 #													 #
 # 				   		STUDIES						 #
@@ -492,6 +569,13 @@ def average_random_memory(N):
 		finish_iter , ship_cells_t = random_with_memory(mapa)
 		finish_iters.append(finish_iter)
 
+	#Construct a list with the values of finish_iters < 94 (sweep performance for 'grid' map)
+	finish_iters = np.array(finish_iters)
+
+	outperform = len(finish_iters[finish_iters < 94])
+	outperform_percentage = outperform / N * 100
+	print('Outperforms: %i' % outperform, 'or', outperform_percentage, '%')
+
 	avg = int(round(np.mean(finish_iters), 2))
 
 	x = np.arange(1, N+1, 1)
@@ -554,7 +638,7 @@ def average_human(N):
 
 		finish_iters.append(finish_iter)
 
-	avg = int(round(np.mean(finish_iters), 2))
+	avg = int(round(np.mean(finish_iters), 0))
 
 	x = np.arange(1, N+1, 1)
 	avg_arr = np.linspace(avg, avg, len(finish_iters))
@@ -569,6 +653,81 @@ def average_human(N):
 	plt.subplot(1, 2, 2)
 	plt.hist(finish_iters, bins=25, density=True)
 	plt.show()
+
+def comparison_avg(N):
+
+	finish_iters_random_memory = []
+	finish_iters_random = []
+	finish_iters_human = []
+
+	print('---------- Sweep ----------')
+
+	mapa = read_map('grid')
+
+	finish_iter_sweep, ship_cells_t_sweep = sweep(mapa)
+
+	print('---------- Random No Memory ----------')
+
+	for i in range(N):
+
+		#Leer mapa
+		mapa = read_map('grid')
+
+		#Algoritmo
+		finish_iter, ship_cells_t = random_no_memory(mapa)
+
+		finish_iters_random.append(finish_iter)
+
+	print('---------- Random Memory ----------')
+
+	for i in range(N):
+		
+		#Leer mapa
+		mapa = read_map('grid')
+		
+		#Algoritmo
+		finish_iter, ship_cells_t = random_with_memory(mapa)
+
+		finish_iters_random_memory.append(finish_iter)
+
+	print('---------- Human ----------')
+
+	for i in range(N):
+
+		#Leer mapa
+		mapa = read_map('grid')
+
+		#Algoritmo
+		finish_iter, ship_cells_t = human(mapa)
+
+		finish_iters_human.append(finish_iter)
+
+	avg_sweep = finish_iter_sweep
+	avg_random = int(round(np.mean(finish_iters_random), 0))
+	avg_random_memory = int(round(np.mean(finish_iters_random_memory), 0))
+	avg_human = int(round(np.mean(finish_iters_human), 0))
+
+	#Comparacion quantitativa entre sweep (2º mejor) y humano (mejor)
+
+	aumento_relativo = avg_sweep / avg_human * 100 - 100
+
+	print('Sweep es un %.2f' % aumento_relativo, '% más ineficiente que el humano')
+
+	#PLOTS
+
+	plt.bar([1], [avg_sweep], color='r', label='Sweep')
+	plt.bar([2], [avg_random], color='b', label='Random')
+	plt.bar([3], [avg_random_memory], color='g', label='Random Memory')
+	plt.bar([4], [avg_human], color='y', label='Human')
+
+	ticks = [1, 2, 3, 4]
+	labels = ['SW', 'RCNM', 'RCWM', 'H']
+
+	plt.xticks(ticks, labels)
+
+	plt.legend()
+	plt.show()
+
 
 ######################################################
 #													 #
@@ -592,4 +751,8 @@ numero = 1000
 #comparison()
 #average_random_memory(numero)
 #average_random(numero)
-average_human(numero)
+#average_human(numero)
+
+#comparison_avg(numero)
+
+#Falta fer comparació amb mitjanes
