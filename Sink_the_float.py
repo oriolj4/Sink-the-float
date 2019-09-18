@@ -34,7 +34,7 @@ def plot_map(grid):
 	#Plot the excel file as matrix to account for the map
 	plt.imshow(grid)
 	plt.show()
-	
+
 def contador_celdas(grid):
 
 	row = grid.shape[0]
@@ -587,6 +587,8 @@ def average_random_memory(N):
 	plt.plot(x, avg_arr, color='r', label='Avg value: %i' % avg)
 
 	plt.legend()
+	plt.title('Average Random Choice With Memory')
+
 
 	plt.subplot(1, 2, 2)
 
@@ -619,6 +621,7 @@ def average_random(N):
 	plt.plot(x, avg_arr, color='r', label='Avg value: %i' % avg)
 
 	plt.legend()
+	plt.title('Average Random Choice No Memory')
 
 	plt.subplot(1, 2, 2)
 	plt.hist(finish_iters, bins=25, density=True)
@@ -643,12 +646,15 @@ def average_human(N):
 	x = np.arange(1, N+1, 1)
 	avg_arr = np.linspace(avg, avg, len(finish_iters))
 
+	
+
 	plt.subplot(1,2,1)
 
 	plt.plot(x, finish_iters, color='b', label='Finish iter per game')
 	plt.plot(x, avg_arr, color='r', label='Avg value: %i' % avg)
 
 	plt.legend()
+	plt.title('Average Human')
 
 	plt.subplot(1, 2, 2)
 	plt.hist(finish_iters, bins=25, density=True)
@@ -726,6 +732,8 @@ def comparison_avg(N):
 	plt.xticks(ticks, labels)
 
 	plt.legend()
+	plt.title('Comparison Average')
+
 	plt.show()
 
 
@@ -754,5 +762,3 @@ numero = 1000
 #average_human(numero)
 
 #comparison_avg(numero)
-
-#Falta fer comparació amb mitjanes
